@@ -35,12 +35,18 @@ if __name__ == '__main__':
     
     l1 = load_graph(file1, gformat=args.csv_format, neigh_rule=(args.connection_rule,args.connection_param))
     l2 = load_graph(file2, gformat=args.csv_format, neigh_rule=(args.connection_rule,args.connection_param))
-    
+
     
     if l1.shape[0] > l2.shape[0]:
         raise Exception("G1 must be smaller (fewer nodes) than G2") 
     
-    solver = SameSize(l1,l2)#,threadcount=int(args.num_cores))
+    elif l1.shape[0] == l2.shape[0]:
+        solver = SameSize(l1,l2)#,threadcount=int(args.num_cores))
+    else:
+        if args.backend == 'complete':  
+            solver = Complete(l1,l2,threadcount=int(args.num_cores))
+        else:
+            solver = ScipyBackend(l1,l2)    
     solver.dist_calc()
     if args.verbose:
         print(file1, file2, solver.opt_t, solver.opt_alpha, solver.opt_dist)
