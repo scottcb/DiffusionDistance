@@ -205,6 +205,7 @@ class SameSize(Solver):
         self.opt_t = np.exp(soln.x)
         self.opt_alpha = np.exp(self.opt_over_alpha(e1, e2, np.exp(soln.x))[1])
         self.opt_dist = final_min
+        self.opt_P = np.dot(V2,V1.T)
         return final_min
 
 
@@ -227,10 +228,9 @@ class ScipyBackend(Solver):
             rez = match_given_alpha(ddiff)
              
             dd = np.sqrt(np.sum(
-                    np.power(ddiff*rez,2.0)
+                    ddiff*rez
                 )
-            )
-                
+            ) 
             return dd
         soln=minimize_scalar(obj,method='bounded',bounds=[-3.5,3.5])
         return (soln.fun, soln.x)
@@ -255,6 +255,15 @@ class ScipyBackend(Solver):
         self.opt_t = np.exp(soln.x)
         self.opt_alpha = np.exp(self.opt_over_alpha(e1, e2, np.exp(soln.x))[1])
         self.opt_dist = final_min
+        
+        el1 = np.exp(self.opt_t*np.sqrt(1.0/self.opt_alpha)*e1)
+        el2 = np.exp(self.opt_t*np.sqrt(self.opt_alpha)*e2)
+        
+        ddiff = cdist(np.expand_dims(el2,axis=1), np.expand_dims(el1,axis=1), 'sqeuclidean')
+        P_tilde = match_given_alpha(ddiff)
+        
+        
+        self.opt_P = np.dot(V2,np.dot(P_tilde,V1.T))
         return final_min
     
 class Complete(Solver):
@@ -331,7 +340,8 @@ class Complete(Solver):
                     optima = pool.map(tempf,P_set)
                 bestval = sorted(enumerate(optima), key = lambda x: x[1][1])[0]
                 self.opt_alpha = bestval[1][0]
-                self.opt_P = P_set[bestval[0]]
+                self.opt_P = P_set[bestval[0]][0]
+                #print(self.opt_P)
                 #print("{%f,%f}," % (tt, bestval))print(minn)
                 return -1.0*bestval[1][1]
             soln=minimize_scalar(obj,method='bounded',bounds=[0.0005,3.5],args=(P_set,))
@@ -339,5 +349,6 @@ class Complete(Solver):
             
         self.opt_dist = -1.0*soln.fun
         self.opt_t = soln.x
+        self.opt_P = np.dot(V2,np.dot(self.opt_P,V1.T))
         return dmax
         
